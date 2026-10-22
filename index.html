@@ -56,7 +56,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(110% 5
 .hint{font-size:13px;color:var(--mut);text-align:center;margin-bottom:16px}
 /* list */
 .list{width:100%;display:flex;flex-direction:column;gap:10px;padding-bottom:20px}
-.it{display:flex;align-items:center;gap:12px;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid var(--g2);border-radius:24px;padding:12px;animation:in .3s}
+.it{display:flex;align-items:center;gap:12px;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid var(--g2);border-radius:24px;padding:12px}
 .inf{flex:1;min-width:0;padding-left:6px}
 .nm{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sz{font-size:12px;color:var(--mut);margin-top:3px}
@@ -77,7 +77,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(110% 5
 .shake{animation:shake .4s}
 @keyframes shake{25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
 #err{height:22px;margin-top:14px;color:#ff6a6a;font-size:14px;font-weight:600}
-#wait{display:none;flex-direction:column;align-items:center;text-align:center;margin-top:24vh;animation:in .6s .3s both;gap:20px;font-weight:700;font-size:22px;line-height:1.3}
+#wait{display:none;position:fixed;inset:0;z-index:1;pointer-events:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 24px;animation:in .6s .2s both;gap:22px;font-weight:700;font-size:24px;line-height:1.3}
 #got{display:none;width:100%;text-align:center;font-weight:700;font-size:16px;background:rgba(225,24,24,.2);border:1px solid rgba(255,80,80,.5);border-radius:20px;padding:16px;margin:20px 0 14px}
 .sp{width:48px;height:48px;border:5px solid var(--g2);border-top-color:var(--red);border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -115,6 +115,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(110% 5
     </div>
     <div class="hint">Любые файлы: фото, видео, ZIP, APK… до 100 МБ каждый</div>
     <input type="file" id="fi" multiple hidden>
+    <button class="btn o" id="sAll" style="display:none;margin-bottom:10px">Удалить все</button>
     <div class="list" id="sl"></div>
   </div>
 </div>
@@ -129,6 +130,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(110% 5
     </div>
     <div id="wait"><div class="sp"></div>Ждём получение файла…</div>
     <div id="got">Пользователь уже отправил файл</div>
+    <button class="btn o" id="rAll" style="display:none;margin-bottom:10px">Удалить все</button>
     <div class="list" id="rl"></div>
   </div>
 </div>
@@ -187,6 +189,8 @@ function render(){
     if(role==='r'&&it.done)act=isL?`<button class="ib dl" data-open="${it.id}" aria-label="Открыть">${svg('<path d="M7 17L17 7M8 7h9v9"/>',2.5)}</button>`:`<button class="ib dl" data-dl="${it.id}" aria-label="Скачать">${DL}</button>`;
     return `<div class="it" data-id="${it.id}"><div class="inf"><div class="nm">${esc(isL?it.url:it.name)}</div><div class="sz">${isL?'ССЫЛКА':sub}</div>${pr}</div><div class="ic">${svg(P[k])}</div>${act}<button class="ib" data-del="${it.id}" aria-label="Удалить">${TRASH}</button></div>`;
   }).join('');
+  $('#sAll').style.display=(role==='s'&&items.length>0)?'block':'none';
+  $('#rAll').style.display=(role==='r'&&items.length>0)?'block':'none';
   if(role==='r'){
     const has=items.length>0;
     $('#got').style.display=has?'block':'none';
@@ -194,6 +198,11 @@ function render(){
   }
 }
 function prog(it){const b=document.querySelector(`[data-id="${it.id}"] .bar i`);if(b)b.style.width=(it.progress*100)+'%'}
+function delAll(){
+  if(conn&&conn.open)conn.send({t:'delall'});
+  items=[];render();
+}
+$('#sAll').onclick=delAll;$('#rAll').onclick=delAll;
 function remove(id,notify){
   items=items.filter(i=>i.id!==id);
   if(notify&&conn&&conn.open)conn.send({t:'del',id});
@@ -235,7 +244,7 @@ function tryCode(n){
     const up=()=>setConn(true);
     c.open?up():c.on('open',up);
     c.on('close',()=>{if(conn===c){conn=null;setConn(false)}});
-    c.on('data',m=>{if(m&&m.t==='del')remove(m.id,false)});
+    c.on('data',m=>{if(!m)return;if(m.t==='del')remove(m.id,false);else if(m.t==='delall'){items=[];render()}});
   });
 }
 function buildQR(code){
@@ -278,7 +287,7 @@ $('#sendLnk').onclick=()=>{
 /* ===== RECEIVE ===== */
 function startRecv(code){
   cleanup();role='r';show('recv');render();
-  $('#codein').classList.remove('fly');$('#ci').value='';$('#err').textContent='';
+  $('#codein').classList.remove('fly');$('#codein').style.display='';$('#ci').value='';$('#err').textContent='';
   $('#wait').style.display='none';$('#got').style.display='none';
   if(code){$('#ci').value=code;join(code)}else setTimeout(()=>$('#ci').focus(),300);
 }
@@ -299,7 +308,7 @@ function join(code){
     c.on('open',()=>{
       $('#err').textContent='';
       $('#codein').classList.add('fly');
-      setTimeout(render,900);
+      setTimeout(()=>{$('#codein').style.display='none';render()},900);
     });
     c.on('data',onRecv);
     c.on('close',()=>{if(conn===c&&role==='r'){toast('Отправитель отключился')}});
@@ -321,6 +330,7 @@ function onRecv(m){
     if(/^https?:\/\//i.test(m.url))items.push({id:m.id,type:'link',url:m.url,done:true});render();
   }
   else if(m.t==='del')remove(m.id,false);
+  else if(m.t==='delall'){items=[];render()}
 }
 
 $('#bSend').onclick=startSend;
