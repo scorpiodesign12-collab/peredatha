@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ПЕРЕДАЧА — файлы между устройствами</title>
+<style>
+:root{--fg:#fff;--red:#e11818;--g:rgba(255,255,255,.06);--g2:rgba(255,255,255,.12);--mut:#9a9a9f}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;color:var(--fg);font-family:-apple-system,'SF Pro Display','Inter','Segoe UI',Roboto,Arial,sans-serif;overflow:hidden;background:#000}
+body::before{content:"";position:fixed;inset:0;background:radial-gradient(110% 55% at 75% -8%,#d41a1a 0%,#6a1010 38%,#000 72%);z-index:-1}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;padding:calc(18px + env(safe-area-inset-top,0px)) 20px calc(20px + env(safe-area-inset-bottom,0px));overflow-y:auto}
+.screen.on{display:flex;animation:in .35s ease}
+@keyframes in{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.top{width:100%;max-width:480px;display:flex;align-items:center;gap:12px;min-height:48px}
+.back{width:48px;height:48px;border-radius:50%;border:1px solid var(--g2);background:rgba(255,255,255,.1);backdrop-filter:blur(14px);color:#fff;display:grid;place-items:center;cursor:pointer;transition:.2s}
+.back:hover{background:#fff;color:#000}
+.back svg{width:22px;height:22px}
+.brand{font-weight:600;letter-spacing:.14em;font-size:13px;color:var(--mut)}
+/* home */
+#home{justify-content:center}
+.card{width:100%;max-width:400px;padding:44px 24px 28px;border-radius:40px;background:radial-gradient(90% 70% at 50% 0%,rgba(225,24,24,.35),rgba(0,0,0,.92) 70%);box-shadow:inset 0 0 70px rgba(200,20,20,.45),0 20px 60px rgba(0,0,0,.6);border:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;align-items:center}
+.orbs{display:flex;margin-bottom:26px}
+.orbs i{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(255,255,255,.18)}
+.orbs i:first-child{background:radial-gradient(circle at 30% 25%,#8b5cf6,#2a1260);margin-right:-8px;z-index:1}
+.orbs i:last-child{background:radial-gradient(circle at 30% 25%,#ff5a5a,#c01212)}
+.orbs svg{width:30px;height:30px;color:#fff}
+.logo{font-size:30px;font-weight:700;text-align:center;line-height:1.15;margin-bottom:10px}
+.card p{color:var(--mut);margin-bottom:28px;font-size:16px;text-align:center;line-height:1.4}
+.big{width:100%;height:58px;margin-bottom:12px;font-family:inherit;font-size:17px;font-weight:600;border:0;border-radius:18px;cursor:pointer;transition:.2s}
+.big.w{background:#fff;color:#000}
+.big.r{background:linear-gradient(180deg,#f03030,#b80f0f);color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.big:active{transform:scale(.97)}
+.big:hover{filter:brightness(1.08)}
+/* send */
+.main{width:100%;max-width:480px;flex:1;display:flex;flex-direction:column;align-items:center;padding-top:18px}
+.qrbtn{width:68px;height:68px;border-radius:50%;border:1px solid var(--g2);background:radial-gradient(circle at 30% 25%,#ff5a5a,#b80f0f);color:#fff;display:grid;place-items:center;cursor:pointer;transition:.2s;box-shadow:0 8px 30px rgba(225,24,24,.4)}
+.qrbtn:hover{transform:scale(1.06)}
+.qrbtn svg{width:32px;height:32px}
+.code,#ci{font-family:inherit;font-weight:800;font-size:clamp(76px,24vw,112px);line-height:1;letter-spacing:.06em;text-align:center;color:#fff;font-variant-numeric:tabular-nums}
+.code{margin:22px 0 8px;padding-left:.06em}
+.stat{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:8px;margin-bottom:24px}
+.dot{width:9px;height:9px;background:var(--red);border-radius:50%;animation:pulse 1.2s infinite}
+.stat.ok{color:#fff}.stat.ok .dot{background:#fff;animation:none}
+@keyframes pulse{50%{opacity:.2;transform:scale(.6)}}
+.act{width:100%;display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.btn{width:100%;height:56px;padding:0 18px;font-family:inherit;font-size:16px;font-weight:600;background:#fff;color:#000;border:0;border-radius:18px;cursor:pointer;transition:.2s}
+.btn:hover{filter:brightness(.9)}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.3;pointer-events:none}
+.btn.o{background:rgba(255,255,255,.12);color:#fff}
+.row{display:flex;gap:8px}
+.row input{flex:1;min-width:0;height:56px;background:rgba(255,255,255,.08);border:1px solid var(--g2);border-radius:18px;color:#fff;padding:0 16px;font-size:16px;outline:none}
+.row input:focus{border-color:var(--red)}
+.row .btn{width:auto}
+.hint{font-size:13px;color:var(--mut);text-align:center;margin-bottom:16px}
+/* list */
+.list{width:100%;display:flex;flex-direction:column;gap:10px;padding-bottom:20px}
+.it{display:flex;align-items:center;gap:12px;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid var(--g2);border-radius:24px;padding:12px;animation:in .3s}
+.inf{flex:1;min-width:0;padding-left:6px}
+.nm{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sz{font-size:12px;color:var(--mut);margin-top:3px}
+.bar{height:5px;background:var(--g2);border-radius:5px;margin-top:9px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#b80f0f,#ff4a4a);border-radius:5px;transition:width .15s}
+.ic{width:48px;height:48px;flex:none;border-radius:16px;background:radial-gradient(circle at 30% 25%,#ff5a5a,#b80f0f);display:grid;place-items:center;color:#fff}
+.ic svg{width:24px;height:24px}
+.ib{width:48px;height:48px;flex:none;border:0;border-radius:50%;background:#fff;color:#000;display:grid;place-items:center;cursor:pointer;transition:.2s}
+.ib:hover{background:var(--red);color:#fff}
+.ib.dl{background:linear-gradient(180deg,#f03030,#b80f0f);color:#fff}.ib.dl:hover{filter:brightness(1.15)}
+.ib svg{width:22px;height:22px}
+/* recv */
+#codein{display:flex;flex-direction:column;align-items:center;width:100%;transition:transform .9s cubic-bezier(.5,-.3,.9,.4),opacity .9s;margin-top:8vh}
+#codein.fly{transform:translateY(-70vh) scale(.6);opacity:0}
+.lbl{font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:22px;text-align:center}
+#ci{width:100%;max-width:420px;background:none;border:0;border-bottom:5px solid var(--red);border-radius:0 0 3px 3px;padding:0 0 10px .06em;outline:none}
+#ci::placeholder{color:rgba(255,255,255,.12)}
+.shake{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+#err{height:22px;margin-top:14px;color:#ff6a6a;font-size:14px;font-weight:600}
+#wait{display:none;flex-direction:column;align-items:center;text-align:center;margin-top:24vh;animation:in .6s .3s both;gap:20px;font-weight:700;font-size:22px;line-height:1.3}
+#got{display:none;width:100%;text-align:center;font-weight:700;font-size:16px;background:rgba(225,24,24,.2);border:1px solid rgba(255,80,80,.5);border-radius:20px;padding:16px;margin:20px 0 14px}
+.sp{width:48px;height:48px;border:5px solid var(--g2);border-top-color:var(--red);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* modal */
+#qm{position:fixed;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:9;padding:24px;flex-direction:column;gap:22px}
+#qm.on{display:flex;animation:in .25s}
+#qrbox{background:#fff;padding:18px;width:min(80vw,320px);border-radius:28px;box-shadow:0 0 70px rgba(225,24,24,.6)}
+#qrbox svg{width:100%;height:auto;display:block}
+#qm p{font-size:14px;color:var(--mut);text-align:center;line-height:1.5}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translate(-50%,40px);background:#fff;color:#000;padding:13px 20px;border-radius:16px;font-weight:600;font-size:14px;opacity:0;transition:.3s;z-index:10;pointer-events:none;max-width:90vw;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<div class="screen on" id="home">
+  <div class="card">
+    <div class="orbs"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></svg></i><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></i></div>
+    <div class="logo">Передача файлов<br>между устройствами</div>
+    <p>Напрямую, без загрузки на сервер.<br>До 100 МБ за файл.</p>
+    <button class="big w" id="bSend">Отправить</button>
+    <button class="big r" id="bRecv">Получить</button>
+  </div>
+</div>
+
+<div class="screen" id="send">
+  <div class="top"><button class="back" data-back aria-label="Назад"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M15 5l-7 7 7 7"/></svg></button><span class="brand">ОТПРАВКА</span></div>
+  <div class="main">
+    <button class="qrbtn" id="qrOpen" aria-label="QR-код"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M17 20h4v-2"/></svg></button>
+    <div class="code" id="code">····</div>
+    <div class="stat" id="stat"><span class="dot"></span><span id="statT">Создаём код…</span></div>
+    <div class="act">
+      <button class="btn" id="pick" disabled>Отправить файл</button>
+      <div class="row"><input id="lnk" type="url" placeholder="Вставьте ссылку" autocomplete="off"><button class="btn o" id="sendLnk" disabled>Ссылка</button></div>
+    </div>
+    <div class="hint">Любые файлы: фото, видео, ZIP, APK… до 100 МБ каждый</div>
+    <input type="file" id="fi" multiple hidden>
+    <div class="list" id="sl"></div>
+  </div>
+</div>
+
+<div class="screen" id="recv">
+  <div class="top"><button class="back" data-back aria-label="Назад"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M15 5l-7 7 7 7"/></svg></button><span class="brand">ПОЛУЧЕНИЕ</span></div>
+  <div class="main">
+    <div id="codein">
+      <div class="lbl">Введите код с другого устройства</div>
+      <input id="ci" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
+      <div id="err"></div>
+    </div>
+    <div id="wait"><div class="sp"></div>Ждём получение файла…</div>
+    <div id="got">Пользователь уже отправил файл</div>
+    <div class="list" id="rl"></div>
+  </div>
+</div>
+
+<div id="qm"><div id="qrbox"></div><p>Отсканируйте камерой на втором устройстве<br>Нажмите, чтобы закрыть</p></div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script>
+const $=s=>document.querySelector(s), MAX=100*1024*1024, CH=16384, PFX='nvfx';
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let peer=null, conn=null, items=[], role=null;
+
+const P={
+ img:'<rect x="3" y="4" width="18" height="16"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/>',
+ vid:'<rect x="3" y="5" width="18" height="14"/><path d="M10 9l5 3-5 3z" fill="currentColor"/>',
+ apk:'<path d="M7 9h10v8a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2zM7 9a5 5 0 0 1 10 0M9 4L8 2M15 4l1-2M4 11v5M20 11v5"/><circle cx="10" cy="7" r=".6" fill="currentColor"/><circle cx="14" cy="7" r=".6" fill="currentColor"/>',
+ zip:'<path d="M5 3h14v18H5zM12 3v2M12 7v2M12 11v2"/><rect x="10" y="14" width="4" height="4"/>',
+ aud:'<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
+ doc:'<path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/>',
+ lnk:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+ file:'<path d="M6 3h9l4 4v14H6zM14 3v5h5"/>'
+};
+function kind(it){
+  if(it.type==='link')return'lnk';
+  const n=(it.name||'').toLowerCase(), m=it.mime||'';
+  if(/\.apks?$|\.xapk$/.test(n)||m.includes('android.package'))return'apk';
+  if(m.startsWith('image/')||/\.(png|jpe?g|gif|webp|heic|bmp|svg)$/.test(n))return'img';
+  if(m.startsWith('video/')||/\.(mp4|mov|mkv|avi|webm)$/.test(n))return'vid';
+  if(m.startsWith('audio/')||/\.(mp3|wav|ogg|flac|m4a)$/.test(n))return'aud';
+  if(/\.(zip|rar|7z|tar|gz)$/.test(n))return'zip';
+  if(/\.(pdf|docx?|xlsx?|pptx?|txt|rtf)$/.test(n))return'doc';
+  return'file';
+}
+const svg=(p,w=2)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="square">${p}</svg>`;
+const TRASH=svg('<path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"/>');
+const DL=svg('<path d="M12 3v13M6 11l6 6 6-6M4 21h16"/>',2.5);
+const fmt=b=>b<1024?b+' Б':b<1048576?(b/1024).toFixed(0)+' КБ':(b/1048576).toFixed(1)+' МБ';
+
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600)}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id))}
+function cleanup(){try{conn&&conn.close()}catch(e){}try{peer&&peer.destroy()}catch(e){}peer=conn=null;items=[];role=null}
+function home(){cleanup();location.hash='';show('home')}
+document.querySelectorAll('[data-back]').forEach(b=>b.onclick=home);
+
+/* list render */
+function render(){
+  const el=role==='s'?$('#sl'):$('#rl');
+  el.innerHTML=items.map(it=>{
+    const k=kind(it), isL=it.type==='link';
+    let sub=isL?esc(it.url):fmt(it.size);
+    const pr=!it.done&&!isL?`<div class="bar"><i style="width:${(it.progress||0)*100}%"></i></div>`:'';
+    let act='';
+    if(role==='r'&&it.done)act=isL?`<button class="ib dl" data-open="${it.id}" aria-label="Открыть">${svg('<path d="M7 17L17 7M8 7h9v9"/>',2.5)}</button>`:`<button class="ib dl" data-dl="${it.id}" aria-label="Скачать">${DL}</button>`;
+    return `<div class="it" data-id="${it.id}"><div class="inf"><div class="nm">${esc(isL?it.url:it.name)}</div><div class="sz">${isL?'ССЫЛКА':sub}</div>${pr}</div><div class="ic">${svg(P[k])}</div>${act}<button class="ib" data-del="${it.id}" aria-label="Удалить">${TRASH}</button></div>`;
+  }).join('');
+  if(role==='r'){
+    const has=items.length>0;
+    $('#got').style.display=has?'block':'none';
+    $('#wait').style.display=(!has&&$('#codein').classList.contains('fly'))?'flex':'none';
+  }
+}
+function prog(it){const b=document.querySelector(`[data-id="${it.id}"] .bar i`);if(b)b.style.width=(it.progress*100)+'%'}
+function remove(id,notify){
+  items=items.filter(i=>i.id!==id);
+  if(notify&&conn&&conn.open)conn.send({t:'del',id});
+  render();
+}
+document.addEventListener('click',e=>{
+  const d=e.target.closest('[data-del]');if(d){remove(d.dataset.del,true);return}
+  const dl=e.target.closest('[data-dl]');
+  if(dl){const it=items.find(i=>i.id===dl.dataset.dl);if(it&&it.blob){const u=URL.createObjectURL(it.blob),a=document.createElement('a');a.href=u;a.download=it.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}return}
+  const o=e.target.closest('[data-open]');
+  if(o){const it=items.find(i=>i.id===o.dataset.open);if(it)window.open(it.url,'_blank','noopener')}
+});
+
+/* ===== SEND ===== */
+function setConn(ok){
+  $('#stat').className='stat'+(ok?' ok':'');
+  $('#statT').textContent=ok?'Получатель подключён':'Ждём получателя';
+  $('#pick').disabled=!ok;$('#sendLnk').disabled=!ok;
+}
+function startSend(){
+  cleanup();role='s';show('send');render();
+  $('#code').textContent='····';$('#statT').textContent='Создаём код…';$('#stat').className='stat';
+  $('#pick').disabled=true;$('#sendLnk').disabled=true;
+  tryCode(0);
+}
+function tryCode(n){
+  const code=String(Math.floor(1000+Math.random()*9000));
+  const p=new Peer(PFX+code);peer=p;
+  p.on('open',()=>{if(peer!==p)return;$('#code').textContent=code;buildQR(code);setConn(false)});
+  p.on('error',e=>{
+    if(peer!==p)return;
+    if(e.type==='unavailable-id'&&n<8){try{p.destroy()}catch(x){}tryCode(n+1)}
+    else{$('#statT').textContent='Нет связи с сервером'}
+  });
+  p.on('disconnected',()=>{try{p.reconnect()}catch(e){}});
+  p.on('connection',c=>{
+    if(conn&&conn.open){c.close();return}
+    conn=c;
+    const up=()=>setConn(true);
+    c.open?up():c.on('open',up);
+    c.on('close',()=>{if(conn===c){conn=null;setConn(false)}});
+    c.on('data',m=>{if(m&&m.t==='del')remove(m.id,false)});
+  });
+}
+function buildQR(code){
+  try{
+    const qr=qrcode(0,'M');qr.addData(location.origin+location.pathname+'#'+code);qr.make();
+    $('#qrbox').innerHTML=qr.createSvgTag(6,0);
+  }catch(e){$('#qrbox').textContent=code}
+}
+$('#qrOpen').onclick=()=>$('#qm').classList.add('on');
+$('#qm').onclick=()=>$('#qm').classList.remove('on');
+
+$('#pick').onclick=()=>$('#fi').click();
+$('#fi').onchange=async e=>{const fs=[...e.target.files];e.target.value='';for(const f of fs)await sendFile(f)};
+async function sendFile(f){
+  if(!conn||!conn.open)return toast('Получатель не подключён');
+  if(f.size>MAX)return toast('«'+f.name+'» больше 100 МБ');
+  const c=conn,it={id:Math.random().toString(36).slice(2,10),name:f.name,size:f.size,mime:f.type,type:'file',progress:0};
+  items.push(it);render();
+  c.send({t:'file',id:it.id,name:f.name,size:f.size,mime:f.type});
+  let off=0;
+  while(off<f.size){
+    if(!items.includes(it)||!c.open)return;
+    while(c.dataChannel&&c.dataChannel.bufferedAmount>1048576)await sleep(20);
+    const buf=await f.slice(off,off+CH).arrayBuffer();
+    c.send({t:'c',id:it.id,d:buf});
+    off+=buf.byteLength;it.progress=off/f.size;prog(it);
+  }
+  if(!items.includes(it))return;
+  c.send({t:'end',id:it.id});it.done=true;render();
+}
+$('#sendLnk').onclick=()=>{
+  let u=$('#lnk').value.trim();if(!u)return;
+  if(!/^https?:\/\//i.test(u))u='https://'+u;
+  try{new URL(u)}catch(e){return toast('Некорректная ссылка')}
+  if(!conn||!conn.open)return toast('Получатель не подключён');
+  const it={id:Math.random().toString(36).slice(2,10),type:'link',url:u,done:true};
+  items.push(it);conn.send({t:'link',id:it.id,url:u});$('#lnk').value='';render();
+};
+
+/* ===== RECEIVE ===== */
+function startRecv(code){
+  cleanup();role='r';show('recv');render();
+  $('#codein').classList.remove('fly');$('#ci').value='';$('#err').textContent='';
+  $('#wait').style.display='none';$('#got').style.display='none';
+  if(code){$('#ci').value=code;join(code)}else setTimeout(()=>$('#ci').focus(),300);
+}
+$('#ci').oninput=e=>{
+  e.target.value=e.target.value.replace(/\D/g,'').slice(0,4);$('#err').textContent='';
+  if(e.target.value.length===4){e.target.blur();join(e.target.value)}
+};
+function bad(msg){
+  try{peer&&peer.destroy()}catch(e){}peer=conn=null;
+  $('#err').textContent=msg;$('#ci').classList.remove('shake');void $('#ci').offsetWidth;$('#ci').classList.add('shake');$('#ci').value='';
+}
+function join(code){
+  $('#err').textContent='Подключаемся…';
+  const p=new Peer();peer=p;
+  p.on('error',e=>{if(peer!==p)return;bad(e.type==='peer-unavailable'?'Код не найден':'Нет связи с сервером')});
+  p.on('open',()=>{
+    const c=p.connect(PFX+code,{reliable:true});conn=c;
+    c.on('open',()=>{
+      $('#err').textContent='';
+      $('#codein').classList.add('fly');
+      setTimeout(render,900);
+    });
+    c.on('data',onRecv);
+    c.on('close',()=>{if(conn===c&&role==='r'){toast('Отправитель отключился')}});
+  });
+}
+function onRecv(m){
+  if(!m)return;
+  if(m.t==='file')items.push({id:m.id,name:m.name,size:m.size,mime:m.mime,type:'file',parts:[],got:0,progress:0}),render();
+  else if(m.t==='c'){
+    const it=items.find(i=>i.id===m.id);if(!it)return;
+    const d=m.d instanceof ArrayBuffer?m.d:(m.d.buffer?m.d:m.d);
+    it.parts.push(d);it.got+=d.byteLength;it.progress=it.got/it.size;prog(it);
+  }
+  else if(m.t==='end'){
+    const it=items.find(i=>i.id===m.id);if(!it)return;
+    it.blob=new Blob(it.parts,{type:it.mime||'application/octet-stream'});it.parts=[];it.done=true;render();
+  }
+  else if(m.t==='link'){
+    if(/^https?:\/\//i.test(m.url))items.push({id:m.id,type:'link',url:m.url,done:true});render();
+  }
+  else if(m.t==='del')remove(m.id,false);
+}
+
+$('#bSend').onclick=startSend;
+$('#bRecv').onclick=()=>startRecv();
+window.addEventListener('load',()=>{const h=location.hash.slice(1);if(/^\d{4}$/.test(h))startRecv(h)});
+</script>
+</body>
+</html>
