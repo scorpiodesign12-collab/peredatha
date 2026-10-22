@@ -54,6 +54,17 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(110% 5
 .row input:focus{border-color:var(--red)}
 .row .btn{width:auto}
 .hint{font-size:13px;color:var(--mut);text-align:center;margin-bottom:16px}
+/* devices */
+.devs{display:none;align-items:center;justify-content:center;gap:14px;width:100%;margin-bottom:22px}
+.devs.on{display:flex;animation:in .4s}
+.dv{display:flex;flex-direction:column;align-items:center;gap:8px;width:104px}
+.dc{width:68px;height:68px;border-radius:50%;display:grid;place-items:center;color:#fff;background:radial-gradient(circle at 30% 25%,#ff5a5a,#b80f0f);border:1px solid rgba(255,255,255,.25);box-shadow:0 6px 24px rgba(225,24,24,.35)}
+.dc.rc{background:#fff;color:#000;box-shadow:0 6px 24px rgba(255,255,255,.15)}
+.dc.un{background:none;border:2px dashed var(--g2);box-shadow:none;color:var(--mut);font-size:26px;font-weight:700}
+.dc svg{width:34px;height:34px}
+.dl1{font-size:11px;letter-spacing:.1em;font-weight:700;text-transform:uppercase}
+.dl2{font-size:12px;color:var(--mut);margin-top:-5px;text-align:center}
+.arr{color:var(--red);width:30px;height:30px;margin-bottom:34px;animation:pulse 1.4s infinite}
 /* list */
 .list{width:100%;display:flex;flex-direction:column;gap:10px;padding-bottom:20px}
 .it{display:flex;align-items:center;gap:12px;background:linear-gradient(160deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid var(--g2);border-radius:24px;padding:12px}
@@ -108,6 +119,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(110% 5
   <div class="main">
     <button class="qrbtn" id="qrOpen" aria-label="QR-код"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M17 20h4v-2"/></svg></button>
     <div class="code" id="code">····</div>
+    <div class="devs" id="devS"></div>
     <div class="stat" id="stat"><span class="dot"></span><span id="statT">Создаём код…</span></div>
     <div class="act">
       <button class="btn" id="pick" disabled>Отправить файл</button>
@@ -128,6 +140,7 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(110% 5
       <input id="ci" inputmode="numeric" maxlength="4" placeholder="0000" autocomplete="off">
       <div id="err"></div>
     </div>
+    <div class="devs" id="devR"></div>
     <div id="wait"><div class="sp"></div>Ждём получение файла…</div>
     <div id="got">Пользователь уже отправил файл</div>
     <button class="btn o" id="rAll" style="display:none;margin-bottom:10px">Удалить все</button>
@@ -144,7 +157,36 @@ body::before{content:"";position:fixed;inset:0;background:radial-gradient(110% 5
 const $=s=>document.querySelector(s), MAX=100*1024*1024, CH=16384, PFX='nvfx';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let peer=null, conn=null, items=[], role=null;
+let peer=null, conn=null, items=[], role=null, peerOS=null;
+const OSI={
+ win:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5l7-1v7H3zM11 4.4L21 3v8.5H11zM3 12.5h7v7l-7-1zM11 12.5h10V21l-10-1.4z"/></svg>',
+ apple:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.6c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 6.9 1.2 9.2.8 1.1 1.7 2.3 2.9 2.3 1.2 0 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8zM14.1 5.7c.6-.8 1.1-1.9.900-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1.1.1 2.2-.5 2.8-1.3z"/></svg>',
+ android:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 10h12v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2zM6 10a6 6 0 0 1 12 0M8.5 4.5L7.5 2.5M15.5 4.5l1-2M3 11v5M21 11v5"/></svg>',
+ linux:'<svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="12" cy="14.5" rx="6.5" ry="7"/><circle cx="12" cy="7" r="4"/><ellipse cx="12" cy="16" rx="3.5" ry="4.5" fill="#000" opacity=".28"/><circle cx="10.5" cy="6.5" r=".9" fill="#000"/><circle cx="13.5" cy="6.5" r=".9" fill="#000"/><path d="M10.5 8.3h3L12 9.8z" fill="#e11818"/><ellipse cx="8" cy="21.5" rx="2.5" ry="1.2" fill="#e11818"/><ellipse cx="16" cy="21.5" rx="2.5" ry="1.2" fill="#e11818"/></svg>',
+ other:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>'
+};
+const OSN={win:'Windows',apple:'Apple',android:'Android',linux:'Linux',other:'Устройство'};
+function detectOS(){
+  const u=navigator.userAgent||'',p=navigator.platform||'';
+  if(/android/i.test(u))return'android';
+  if(/iphone|ipad|ipod/i.test(u)||(/mac/i.test(p)&&navigator.maxTouchPoints>1))return'apple';
+  if(/mac/i.test(p)||/macintosh/i.test(u))return'apple';
+  if(/win/i.test(p)||/windows/i.test(u))return'win';
+  if(/linux|x11|cros/i.test(u+p))return'linux';
+  return'other';
+}
+const myOS=detectOS();
+function dev(os,label,rc,you){
+  const c=os?`<div class="dc${rc?' rc':''}">${OSI[os]}</div>`:'<div class="dc un">?</div>';
+  return `<div class="dv">${c}<div class="dl1">${label}</div><div class="dl2">${os?OSN[os]+(you?' · вы':''):'ждём…'}</div></div>`;
+}
+function renderDevs(){
+  const el=role==='s'?$('#devS'):$('#devR');if(!el||!role)return;
+  const sOS=role==='s'?myOS:peerOS, rOS=role==='r'?myOS:peerOS;
+  el.innerHTML=dev(sOS,'Отправляет',false,role==='s')+`<svg class="arr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>`+dev(rOS,'Получает',true,role==='r');
+  el.classList.add('on');
+}
+function hello(c){try{c.send({t:'hello',os:myOS})}catch(e){}}
 
 const P={
  img:'<rect x="3" y="4" width="18" height="16"/><circle cx="9" cy="10" r="2"/><path d="M21 17l-5-5-9 8"/>',
@@ -174,7 +216,7 @@ const fmt=b=>b<1024?b+' Б':b<1048576?(b/1024).toFixed(0)+' КБ':(b/1048576).to
 
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600)}
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id))}
-function cleanup(){try{conn&&conn.close()}catch(e){}try{peer&&peer.destroy()}catch(e){}peer=conn=null;items=[];role=null}
+function cleanup(){peerOS=null;['#devS','#devR'].forEach(s=>{const e=$(s);if(e){e.classList.remove('on');e.innerHTML=''}});try{conn&&conn.close()}catch(e){}try{peer&&peer.destroy()}catch(e){}peer=conn=null;items=[];role=null}
 function home(){cleanup();location.hash='';show('home')}
 document.querySelectorAll('[data-back]').forEach(b=>b.onclick=home);
 
@@ -226,7 +268,7 @@ function startSend(){
   cleanup();role='s';show('send');render();
   $('#code').textContent='····';$('#statT').textContent='Создаём код…';$('#stat').className='stat';
   $('#pick').disabled=true;$('#sendLnk').disabled=true;
-  tryCode(0);
+  tryCode(0);renderDevs();
 }
 function tryCode(n){
   const code=String(Math.floor(1000+Math.random()*9000));
@@ -241,10 +283,10 @@ function tryCode(n){
   p.on('connection',c=>{
     if(conn&&conn.open){c.close();return}
     conn=c;
-    const up=()=>setConn(true);
+    const up=()=>{setConn(true);hello(c);renderDevs()};
     c.open?up():c.on('open',up);
-    c.on('close',()=>{if(conn===c){conn=null;setConn(false)}});
-    c.on('data',m=>{if(!m)return;if(m.t==='del')remove(m.id,false);else if(m.t==='delall'){items=[];render()}});
+    c.on('close',()=>{if(conn===c){conn=null;peerOS=null;setConn(false);renderDevs()}});
+    c.on('data',m=>{if(!m)return;if(m.t==='hello'){peerOS=m.os;renderDevs()}else if(m.t==='del')remove(m.id,false);else if(m.t==='delall'){items=[];render()}});
   });
 }
 function buildQR(code){
@@ -306,7 +348,7 @@ function join(code){
   p.on('open',()=>{
     const c=p.connect(PFX+code,{reliable:true});conn=c;
     c.on('open',()=>{
-      $('#err').textContent='';
+      $('#err').textContent='';hello(c);renderDevs();
       $('#codein').classList.add('fly');
       setTimeout(()=>{$('#codein').style.display='none';render()},900);
     });
@@ -316,7 +358,8 @@ function join(code){
 }
 function onRecv(m){
   if(!m)return;
-  if(m.t==='file')items.push({id:m.id,name:m.name,size:m.size,mime:m.mime,type:'file',parts:[],got:0,progress:0}),render();
+  if(m.t==='hello'){peerOS=m.os;renderDevs()}
+  else if(m.t==='file')items.push({id:m.id,name:m.name,size:m.size,mime:m.mime,type:'file',parts:[],got:0,progress:0}),render();
   else if(m.t==='c'){
     const it=items.find(i=>i.id===m.id);if(!it)return;
     const d=m.d instanceof ArrayBuffer?m.d:(m.d.buffer?m.d:m.d);
